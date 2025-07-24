@@ -1,4 +1,8 @@
+"use client";
+
 import React, { useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
+import { withProfiler } from '@sentry/react'; 
 
 // Main App component
 const App = () => {
