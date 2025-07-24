@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { withProfiler } from '@sentry/react'; 
+import { withProfiler } from '@sentry/react';
 
 // Main App component
 const App = () => {
   // State to manage the current step of the form
   const [currentStep, setCurrentStep] = useState(1);
+  // State to track Sentry transaction and spans
+  const [transaction, setTransaction] = useState(null);
+  const [currentSpan, setCurrentSpan] = useState(null);
   // State to store all form data
   const [formData, setFormData] = useState({
     customerName: '',
@@ -23,6 +26,51 @@ const App = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   // State for form validation errors
   const [errors, setErrors] = useState({});
+
+  // Initialize Sentry transaction when component mounts
+  useEffect(() => {
+    Sentry.startSpan({
+      name: 'Multi-Step Form Journey',
+      op: 'form.interaction',
+    }, (span) => {
+      setTransaction(span);
+
+      // Create initial span for step 1
+      Sentry.startSpan({
+        name: 'Customer Information Step',
+        op: 'form.step',
+      }, (initialSpan) => {
+        setCurrentSpan(initialSpan);
+      });
+    });
+
+    // Cleanup function
+    return () => {
+      // Sentry handles cleanup automatically
+    };
+  }, []);
+
+  // Function to handle step transitions with Sentry tracking
+  const transitionToStep = (newStep) => {
+    // Create new span for the step we're transitioning to
+    const stepNames = {
+      1: 'Customer Information',
+      2: 'Problem Description', 
+      3: 'Payment Information',
+      4: 'Review & Submit'
+    };
+    
+    Sentry.startSpan({
+      name: `${stepNames[newStep]} Step`,
+      op: 'form.step',
+      data: {
+        stepNumber: newStep,
+        stepName: stepNames[newStep]
+      }
+    }, (newSpan) => {
+      setCurrentSpan(newSpan);
+    });
+  };
 
   // Function to handle input changes and update formData
   const handleChange = (e) => {
@@ -101,13 +149,17 @@ const App = () => {
   // Function to move to the next step
   const nextStep = () => {
     if (validateStep()) {
-      setCurrentStep((prevStep) => prevStep + 1);
+      const newStep = currentStep + 1;
+      transitionToStep(newStep);
+      setCurrentStep(newStep);
     }
   };
 
   // Function to move to the previous step
   const prevStep = () => {
-    setCurrentStep((prevStep) => prevStep - 1);
+    const newStep = currentStep - 1;
+    transitionToStep(newStep);
+    setCurrentStep(newStep);
   };
 
   // Function to handle form submission
@@ -140,7 +192,7 @@ const App = () => {
                 name="customerName"
                 value={formData.customerName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                 placeholder="John Doe"
               />
               {errors.customerName && <p className="mt-1 text-sm text-red-600">{errors.customerName}</p>}
@@ -155,7 +207,7 @@ const App = () => {
                 name="customerEmail"
                 value={formData.customerEmail}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                 placeholder="john.doe@example.com"
               />
               {errors.customerEmail && <p className="mt-1 text-sm text-red-600">{errors.customerEmail}</p>}
@@ -170,7 +222,7 @@ const App = () => {
                 name="customerPhone"
                 value={formData.customerPhone}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                 placeholder="1234567890"
               />
               {errors.customerPhone && <p className="mt-1 text-sm text-red-600">{errors.customerPhone}</p>}
@@ -190,7 +242,7 @@ const App = () => {
                 name="serviceType"
                 value={formData.serviceType}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
               >
                 <option value="">Select a service type</option>
                 <option value="repair">Repair</option>
@@ -211,7 +263,7 @@ const App = () => {
                 value={formData.problemDescription}
                 onChange={handleChange}
                 rows="5"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                 placeholder="Please provide a detailed description of the issue or service you require."
               ></textarea>
               {errors.problemDescription && <p className="mt-1 text-sm text-red-600">{errors.problemDescription}</p>}
@@ -235,7 +287,7 @@ const App = () => {
                 name="cardNumber"
                 value={formData.cardNumber}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                 placeholder="XXXX XXXX XXXX XXXX"
                 maxLength="16"
               />
@@ -252,7 +304,7 @@ const App = () => {
                   name="expiryDate"
                   value={formData.expiryDate}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                   placeholder="MM/YY"
                   maxLength="5"
                 />
@@ -268,7 +320,7 @@ const App = () => {
                   name="cvv"
                   value={formData.cvv}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out text-gray-900"
                   placeholder="XXX"
                   maxLength="4"
                 />
@@ -350,6 +402,21 @@ const App = () => {
             </p>
             <button
               onClick={() => {
+                // Start a new transaction for the next form submission
+                Sentry.startSpan({
+                  name: 'Multi-Step Form Journey',
+                  op: 'form.interaction',
+                }, (span) => {
+                  setTransaction(span);
+
+                  Sentry.startSpan({
+                    name: 'Customer Information Step',
+                    op: 'form.step',
+                  }, (initialSpan) => {
+                    setCurrentSpan(initialSpan);
+                  });
+                });
+
                 setIsSubmitted(false);
                 setCurrentStep(1);
                 setFormData({
@@ -461,4 +528,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default withProfiler(App, { name: 'MultiStepForm' }); 
