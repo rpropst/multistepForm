@@ -29,6 +29,35 @@ const App = () => {
 
   // Initialize Sentry transaction when component mounts
   useEffect(() => {
+    // Set user context for all Sentry events on this page
+    const username = 'John Doe';
+    const email = 'john.doe@example.com';
+    const ntid = '1234567890';
+    const sessionId = crypto.randomUUID();
+
+    const user = {
+      username,
+      email,
+      ntid,
+      sessionId,
+    };
+
+    // Set user context - this will apply to all spans and errors
+    Sentry.setUser(user);
+
+    // Set additional context for better debugging
+    Sentry.setContext('form_session', {
+      sessionId,
+      formType: 'multistep_service_request',
+      startTime: new Date().toISOString(),
+    });
+
+    // Set tags for easier filtering in Sentry dashboard
+    Sentry.setTag('form_type', 'service_request');
+    Sentry.setTag('session_id', sessionId);
+    Sentry.setTag('user.ntid', user.ntid);
+    Sentry.setTag('user.sessionId', user.sessionId);
+
     Sentry.startSpan({
       name: 'Multi-Step Form Journey',
       op: 'form.interaction',
